@@ -33,6 +33,7 @@ import time
 import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from html import escape
 from pathlib import Path
 
 # Configurazione encoding stdout/stderr per Windows
@@ -199,7 +200,7 @@ def extract_pdf_text_native(pdf_path: str) -> str:
 
 
 def extract_pdf_text_ocr(pdf_path: str) -> tuple[str, list]:
-    """Esegue OCR (RapidOCR) sulla prima pagina del PDF (convertita in immagine)."""
+    """Esegue OCR RapidOCR su tutte le pagine del PDF convertite in immagini."""
     if not HAS_RAPID_OCR:
         raise ImportError("La libreria 'rapidocr' non e' installata nel sistema.")
 
@@ -208,29 +209,88 @@ def extract_pdf_text_ocr(pdf_path: str) -> tuple[str, list]:
         doc.close()
         return "", []
 
-    pix = doc.load_page(0).get_pixmap(dpi=200)
-    tmp_dir = tempfile.gettempdir()
-    tmp_img_path = os.path.join(tmp_dir, f"ocr_page_temp_{int(time.time()*1000)}.png")
-    pix.save(tmp_img_path)
-    doc.close()
-
+    engine = RapidOCR()
+    all_text = []
+    all_items = []
     try:
-        engine = RapidOCR()
-        result = engine(tmp_img_path)
-        if not result or not getattr(result, 'txts', None):
-            return "", []
+        for page_idx in range(len(doc)):
+            pix = doc.load_page(page_idx).get_pixmap(dpi=200)
+            tmp_img_path = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".png", prefix="ocr_page_", delete=False
+                ) as tmp_img:
+                    tmp_img_path = tmp_img.name
+                pix.save(tmp_img_path)
 
-        # Ordine di lettura per riga poi colonna
-        items = sorted(
-            zip(result.boxes, result.txts, result.scores),
-            key=lambda it: (round(it[0][0][1] / 10), it[0][0][0])
-        )
-        ocr_items = [{"text": txt, "score": float(score), "box": box.tolist()} for box, txt, score in items]
-        ocr_text = "\n".join(it["text"] for it in ocr_items)
-        return ocr_text, ocr_items
+                result = engine(tmp_img_path)
+                if not result:
+                    continue
+
+                # rapidocr e rapidocr_onnxruntime restituiscono strutture diverse.
+                if hasattr(result, "boxes"):
+                    boxes = result.boxes
+                    txts = result.txts
+                    scores = result.scores
+                elif isinstance(result, (tuple, list)) and len(result) == 2:
+                  # Le versioni meno recenti restituiscono (righe_ocr, tempo).
+                  raw_items = result[0]
+                  if raw_items is None:
+                    boxes, txts, scores = [], [], []
+                  elif len(raw_items) == 0:
+                    boxes, txts, scores = [], [], []
+                  elif all(
+                    isinstance(item, (tuple, list))
+                    and len(item) >= 2
+                    and isinstance(item[1], str)
+                    for item in raw_items
+                  ):
+                    boxes = [item[0] for item in raw_items]
+                    txts = [item[1] for item in raw_items]
+                    scores = [item[2] if len(item) > 2 else 1.0 for item in raw_items]
+                  else:
+                    boxes = result[0]
+                    txts = result[1]
+                    scores = [1.0] * len(txts)
+                else:
+                  if not isinstance(result, (tuple, list)) or len(result) != 3:
+                    raise RuntimeError(
+                      "Formato risultato RapidOCR non supportato "
+                      f"({type(result).__name__})."
+                    )
+                  boxes = result[0]
+                  txts = result[1]
+                  scores = result[2]
+
+                if txts is None or len(txts) == 0:
+                    continue
+
+                # Ordine di lettura per riga poi colonna.
+                items = sorted(
+                    zip(boxes, txts, scores),
+                    key=lambda item: (round(item[0][0][1] / 10), item[0][0][0])
+                )
+                page_items = [
+                    {
+                        "text": str(txt),
+                        "score": float(score),
+                        "box": box.tolist() if hasattr(box, "tolist") else box,
+                        "page": page_idx + 1,
+                    }
+                    for box, txt, score in items
+                ]
+                all_items.extend(page_items)
+                all_text.append(
+                    f"--- Pagina {page_idx + 1} ---\n"
+                    + "\n".join(item["text"] for item in page_items)
+                )
+            finally:
+                if tmp_img_path and os.path.exists(tmp_img_path):
+                    os.remove(tmp_img_path)
     finally:
-        if os.path.exists(tmp_img_path):
-            os.remove(tmp_img_path)
+        doc.close()
+
+    return "\n\n".join(all_text), all_items
 
 
 def process_extraction(
@@ -497,6 +557,61 @@ def build_html_formatted(data_dict: dict) -> str:
     return html
 
 
+def build_html_complete(data_dict: dict) -> str:
+    """Genera un HTML leggibile contenente l'intero JSON restituito dall'estrazione."""
+    pdf_name = str(data_dict.get("file_pdf", "documento"))
+    json_content = json.dumps(data_dict, indent=2, ensure_ascii=False)
+    escaped_json = escape(json_content)
+    escaped_pdf_name = escape(pdf_name)
+
+    return f"""<!doctype html>
+  <html lang="it">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Completo - {escaped_pdf_name}</title>
+  <style>
+    body {{
+      margin: 0;
+      padding: 32px;
+      background: #f1f5f9;
+      color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    main {{
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+    }}
+    h1 {{ margin: 0 0 8px; font-size: 24px; }}
+    .subtitle {{ margin: 0 0 20px; color: #64748b; }}
+    pre {{
+      margin: 0;
+      padding: 20px;
+      overflow: auto;
+      background: #0f172a;
+      color: #c4f1dd;
+      border-radius: 10px;
+      font: 13px/1.55 Consolas, "Courier New", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }}
+  </style>
+  </head>
+  <body>
+  <main>
+    <h1>Contenuto JSON completo</h1>
+    <p class="subtitle">Documento: <strong>{escaped_pdf_name}</strong></p>
+    <pre>{escaped_json}</pre>
+  </main>
+  </body>
+  </html>"""
+
+
 # =============================================================================
 # INTERFACCIA WEB (HTTP SERVER EMBEDDED - STILE SECUREVAULT)
 # =============================================================================
@@ -692,6 +807,7 @@ HTML_PAGE = """<!doctype html>
         <button id="downloadOcrJsonBtn" class="btn-secondary" style="background:#475569;">📄 Scarica JSON OCR</button>
         <button id="downloadJsonBtn" class="btn-secondary">📥 Scarica JSON Estratto</button>
         <button id="downloadHtmlBtn" class="btn-secondary" style="background:#059669;">🌐 Scarica HTML Formattato</button>
+        <button id="downloadCompleteHtmlBtn" class="btn-secondary" style="background:#0f766e;">🌐 Scarica HTML Completo</button>
       </div>
     </div>
     
@@ -753,6 +869,7 @@ const savedPathInfo = document.getElementById('savedPathInfo');
 const downloadJsonBtn = document.getElementById('downloadJsonBtn');
 const downloadOcrJsonBtn = document.getElementById('downloadOcrJsonBtn');
 const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+const downloadCompleteHtmlBtn = document.getElementById('downloadCompleteHtmlBtn');
 const lblOcr = document.getElementById('lblOcr');
 const lblNative = document.getElementById('lblNative');
 
@@ -935,6 +1052,29 @@ downloadHtmlBtn.addEventListener('click', async () => {
     alert(err.message);
   }
 });
+
+// Download HTML Completo Button
+downloadCompleteHtmlBtn.addEventListener('click', async () => {
+  if (!currentResultData) return;
+  try {
+    const res = await fetch(API_BASE + '/api/export-html-complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentResultData)
+    });
+    if (!res.ok) throw new Error("Errore generazione HTML completo");
+    const htmlText = await res.text();
+    const blob = new Blob([htmlText], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentResultData.file_pdf.replace('.pdf', '')}_completo.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert(err.message);
+  }
+});
 </script>
 </body>
 </html>"""
@@ -1099,6 +1239,25 @@ class ExtractorHTTPRequestHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 print(f"[ERROR] Errore in /api/export-html: {e}", flush=True)
+                traceback.print_exc()
+                err_msg = str(e).encode("utf-8")
+                self._send_cors_headers(500, "text/plain; charset=utf-8", len(err_msg))
+                self.wfile.write(err_msg)
+        elif url_parsed.path == "/api/export-html-complete":
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+                data_dict = json.loads(body.decode("utf-8"))
+
+                html_content = build_html_complete(data_dict)
+                html_bytes = html_content.encode("utf-8")
+
+                self._send_cors_headers(200, "text/html; charset=utf-8", len(html_bytes))
+                self.wfile.write(html_bytes)
+
+            except Exception as e:
+                import traceback
+                print(f"[ERROR] Errore in /api/export-html-complete: {e}", flush=True)
                 traceback.print_exc()
                 err_msg = str(e).encode("utf-8")
                 self._send_cors_headers(500, "text/plain; charset=utf-8", len(err_msg))
