@@ -1,0 +1,15 @@
+Agisci come un esperto sviluppatore Python ed esperto di interfacce web. Partendo dal mio script esistente (che usa RapidOCR per l'estrazione del testo da PDF/immagini e nemotron-3-nano:4b tramite API locale per strutturare i dati in JSON), crea una webapp locale completa.
+
+La webapp deve risiedere in un unico file Python o in una struttura minimale e deve ereditare lo stile visivo, il layout, i fogli di stile (CSS) e l'impostazione dell'interfaccia della webapp esistente situata nella directory: `C:\Progetto_AI\SecureVault`. Ispeziona quella cartella o usa un design coerente con essa (es. tema scuro/cyber/secure se applicabile, layout pulito, stessa libreria di UI).
+
+Requisiti tecnici e funzionali stringenti:
+
+1. Dipendenze e Installazione: Non deve essere necessario installare software esterno aggiuntivo oltre ai pacchetti Python standard o già in uso (es. Streamlit, Gradio o Flask/FastAPI se coerenti con SecureVault). Scegli il framework UI che permette il setup più immediato e che corrisponde alla tecnologia usata in SecureVault.
+2. Gestione PDF Parametrica: Inserisci un'opzione (es. un toggle o un menu a tendina) per scegliere se il PDF contiene immagini (richiedendo quindi il passaggio tramite RapidOCR) oppure se è un PDF testuale nativo (permettendo un'estrazione diretta del testo più veloce senza OCR, es. tramite pypdf/pdfplumber).
+3. Prompt Parametrico: Inserisci un'area di testo (TextArea) editabile dall'utente nella UI per modificare il prompt di sistema/istruzioni da inviare a nemotron-3-nano:4b. Imposta come valore predefinito il prompt attualmente funzionante.
+4. Campi di Estrazione Parametrici: Permetti all'utente di definire (tramite una lista di input dinamici o un campo di testo in cui inserire valori separati da virgola) quali campi specifici estrarre dalla fattura (es. Numero Fattura, Data, Totale, IVA, Fornitore). Questo schema deve essere iniettato dinamicamente nel prompt dell'LLM per forzare la struttura del JSON di output.
+5. Selezione Directory di Input: Fornisci un selettore nella UI per specificare o sfogliare la directory locale da cui caricare i file PDF da analizzare.
+6. Selezione Directory di Output: Fornisci un selettore nella UI per definire la directory locale in cui salvare automaticamente i file JSON generati.
+7. Esportazione HTML Formattato: Oltre al salvataggio del JSON, implementa una funzione che converta il JSON risultante in una pagina HTML formattata (es. una tabella pulita o una scheda stile fattura stampabile) e permetta all'utente di scaricarla direttamente tramite un pulsante "Scarica HTML".
+
+Fornisci il codice sorgente completo, commentato in italiano, pronto da eseguire e strutturato in modo modulare.

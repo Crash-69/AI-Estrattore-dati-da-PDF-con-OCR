@@ -1,0 +1,36 @@
+Crea una nuova pagina "Estrattore AI PDF OCR" (Pdf_OCR_AI.html), replicando con precisione le caratteristiche stilistiche, tipografiche e compositive della pagina Spec Driven ("Architectural Precision") e integrando tutti i dettagli tecnici del documento allegato. Utilizza gli stessi header e footer presenti nella mia pagina https://www.bcdigital.it/SpecDriven.html. Ti allego anche uno screen shot della web app  ed una descrizione di cosa fa :
+Trasforma documenti, scansioni e PDF aziendali in dati strutturati e pronti all'uso, mantenendo il controllo totale delle tue informazioni all'interno della tua infrastruttura.
+Introduzione
+Nel contesto aziendale moderno, la gestione manuale di fatture, contratti e documenti cartacei rallenta i processi e aumenta il margine di errore. bcdigital.it presenta Estrattore Dati PDF AI, la webapp progettata per automatizzare l'estrazione semantica dei dati dai tuoi documenti. Grazie alla combinazione avanzata di RapidOCR (per la lettura ad alta definizione di immagini e scansioni) e dell'integrazione nativa con Ollama LLM, la nostra soluzione digitalizza i flussi di lavoro in modo immediato, restituendo file JSON puliti e report HTML pronti per la stampa o l'archiviazione.
+Perché scegliere l'elaborazione con LLM Locale? (H2)
+A differenza delle tradizionali soluzioni cloud, il cuore del nostro sistema si basa sull'utilizzo di Modelli di Linguaggio (LLM) eseguiti localmente. Questo approccio offre tre vantaggi competitivi fondamentali per la tua azienda:
+
+
+Massima Sicurezza e Privacy dei Dati. I tuoi dati non lasciano mai i tuoi server. L'elaborazione locale elimina i rischi di conformità legati all'invio di informazioni sensibili o dati personali (GDPR) verso API di terze parti o server cloud esterni.
+
+Zero Costi di Licenza per Chiamata (API Fees). Dimentica i costi di abbonamento variabili o i pagamenti "al consumo" tipici dei servizi cloud esterni. Sfruttando istanze locali come Ollama, puoi processare migliaia di documenti ogni giorno senza alcuna spesa di transazione aggiuntiva.
+
+Indipendenza e Continuità Operativa. L'applicazione funziona interamente offline e non ha dipendenze web esterne. Questo garantisce che la tua azienda possa continuare a estrarre e validare dati anche in assenza di connessione internet, azzerando i tempi di inattività.
+Caratteristiche Esclusive della Soluzione bcdigital.it (H2)
+⚙️ Modularità e Flessibilità Totale
+
+
+Selezione Dinamica del Modello: Un menu in tempo reale ti permette di scegliere il modello linguistico locale più adatto alle tue esigenze di calcolo (es. Llama3, Qwen, DeepSeek, Gemma).
+
+Prompt e Campi Parametrici: Sei tu a decidere cosa estrarre. Basta inserire i campi desiderati (es. fornitore, partita IVA, totale importo) e il sistema adatterà l'algoritmo all'istante.
+🔍 Precisione e Doppia Tecnologia di Estrazione
+
+
+PDF Digitali Nativi: Estrazione del testo immediata e diretta tramite PyMuPDF.
+
+Scansioni e Immagini: Conversione ad alta definizione a 200 DPI e lettura accurata tramite RapidOCR.
+📊 Validazione Automatica e Output Pronti all'Uso
+
+
+Controllo Euristico Integrato: Il sistema valida e allinea automaticamente la correttezza di Codici Fiscali (anche con gestione dell'omocodia) e Partite IVA prima del salvataggio.
+
+Doppio Salvataggio Automatico: Generazione istantanea sia del file JSON con il testo grezzo sia del file JSON con i dati strutturati e pronti per il tuo gestionale.
+
+Esportazione in un Click: Visualizza e scarica report in tabelle HTML eleganti, responsive e stampabili.
+Scegli l'efficienza senza compromessi.
+Smetti di copiare e incollare dati dai tuoi PDF. Proteggi il know-how della tua azienda e accelera i tuoi processi con l'ecosistema locale di bcdigital.it.
