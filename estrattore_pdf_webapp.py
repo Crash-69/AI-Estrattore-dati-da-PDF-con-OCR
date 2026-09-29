@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-import json
 import html
+import json
 import os
 import re
 import threading
@@ -177,8 +177,8 @@ def extract_document(contents: bytes, filename: str, ocr_engine=None) -> str:
 
     try:
         import cv2
-        import fitz
         import numpy as np
+        import pymupdf as fitz
     except ImportError as exc:
         raise RuntimeError(
             "Le dipendenze OCR/PDF non sono installate. Esegui: pip install -r requirements.txt"

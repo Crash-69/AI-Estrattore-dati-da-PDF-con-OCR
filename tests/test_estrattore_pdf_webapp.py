@@ -10,6 +10,17 @@ import estrattore_pdf_webapp as app
 
 
 class ExtractionHelpersTests(unittest.TestCase):
+    def test_extract_document_reads_native_pdf_text(self):
+        import pymupdf
+
+        document = pymupdf.open()
+        document.new_page().insert_text((72, 72), "Invoice number 1042, total 125.50 EUR")
+
+        text = app.extract_document(document.tobytes(), "invoice.pdf")
+
+        self.assertIn("Invoice number 1042", text)
+        document.close()
+
     def test_parse_upload_decodes_fields_and_sanitizes_filename(self):
         boundary = "test-boundary"
         body = (
